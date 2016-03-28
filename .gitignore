@@ -60,6 +60,9 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+<<<<<<< HEAD
 
 # downloaded data
 OKCu/data*
+=======
+>>>>>>> 635d24603fddbfefd826efaa53e9934278d23f1c
