@@ -1,0 +1,13 @@
+#install virtualenv
+pip install virtualenv
+
+#make virtual envirionment
+virtualenv -p /usr/bin/python2.7 env
+
+#enter virtualenv
+source env/bin/activate
+
+#install scrapy
+pip install scrapy
+
+
