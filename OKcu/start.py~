@@ -19,7 +19,7 @@ if __name__ == '__main__':
 		user = sys.argv[1]
 		password = sys.argv[2]
 	else:
-		print "Please supply a user and a password! (e.g. python start.py jack@gmail.com jackpassword)"
+		print "pp"
 		exit()
 
 	crawler = CrawlerProcess(get_project_settings())

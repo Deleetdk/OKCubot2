@@ -328,7 +328,7 @@ class OKcuSpider(scrapy.Spider):
 				continue
 
 			picture_urls.append(src[0].extract())
-		print picture_urls
+		
 		return picture_urls
 
 	def request_for_image(self, response):
