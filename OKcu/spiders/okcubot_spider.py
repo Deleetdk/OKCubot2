@@ -1,16 +1,30 @@
-import scrapy
-import csv
-import json
-import os
-import datetime
-import pdb
+import scrapy       #scrapy
+import csv              #to write to csv
+import json             #to parse json
+import os               #for pathing
+import datetime     #to get today's date
+import hashlib      #hashing 
+import pdb              #interactive python debugger
+import re               #regex for counting number of questions
 
 class OKcuSpider(scrapy.Spider):
     name = "okcubot"
-    allowed_domains = ["www.okcupid.com"]
     index = 0
     max_people = 1
     domain = "https://www.okcupid.com"
+
+    profile_info = {
+                    "My self-summary":"t_selfsum",
+                    "What I\xe2\x80\x99m doing with my life":"t_doingwithlife",
+                    "I\xe2\x80\x99m really good at":"t_reallygood",
+                    "The first things people usually notice about me":"t_thinsaboutme",
+                    "Favorite books, movies, shows, music, and food":"t_favorite",
+                    "The six things I could never do without":"t_neverdowithout",
+                    "I spend a lot of time thinking about":"t_lotthinking",
+                    "On a typical Friday night I am":"t_fridaynight",
+                    "You should message me if":"t_messageme",
+                    "The most private thing I\xe2\x80\x99m willing to admit":"t_admit"
+            }
 
     basic_info = {
                     "basics":{
@@ -101,13 +115,12 @@ class OKcuSpider(scrapy.Spider):
         
         # urls which scrape users from
         self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100"]
-        #first is men, second is women
 
         # Patch
         self.monkey_patch_HTTPClientParser_statusReceived()
 
     def start_requests(self):
-        self.directory = "data"
+        self.directory = "data" # + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
 
     # scape users in recursive way until the number of user reaches max_people
@@ -159,6 +172,21 @@ class OKcuSpider(scrapy.Spider):
         if len(location) > 1:
             target_info.append(self.get_info_element(response.meta["user_name"], "d_city", location[1].strip()))
 
+        urls = self.download_images(response.meta["user_name"], response)
+
+        index = 0
+        for url in urls:
+            index += 1
+            path = self.directory + "/pictures"
+
+            hash_object = hashlib.md5(response.meta["user_name"].encode('utf8'))
+            path += "/" + hash_object.hexdigest() + "_" + str(index) + ".jpg"           
+
+            request_image = scrapy.Request(url, callback=self.request_for_image)
+            request_image.meta['path'] = path
+            yield request_image
+
+        target_info = self.parse_profile_text(response.meta["user_name"], target_info, response)
         target_info = self.parse_basics(response.meta["user_name"], target_info, response)
         target_info = self.parse_background(response.meta["user_name"], target_info, response)
         target_info = self.parse_misc(response.meta["user_name"], target_info, response)
@@ -218,61 +246,25 @@ class OKcuSpider(scrapy.Spider):
         request.meta['target_info'] = target_info
     
         yield request
-
+    
     # parse questions of a target user
     def parse_questions(self, response):
-        categories = response.xpath("//ul[@id='genre_rows']//li[@class='category']")
-        urls = []
-        for category in categories:
-            url = self.domain + category.xpath(".//a/@href")[0].extract()
-            percent = int(category.xpath(".//p/text()")[0].extract().strip().split(' ')[0][:-1])
-            if percent != 0: 
-                urls.append(url)
-
-        if len(urls) > 0:
-            # send request to go to questions page for each category.
-            request = scrapy.Request(urls[0], callback=self.parse_questions_category)
-            print "Scraping question data from " + urls[0] + '\n'
-            request.meta['user_name'] = response.meta["user_name"]
-            request.meta['target_info'] = response.meta['target_info']
-            request.meta['index'] = 1
-            request.meta['urls'] = urls
-            yield request
-        else:
-            self.save_as_csv(response.meta["user_name"], response.meta['target_info'])
-            print response.meta['target_info']
-    
-    # get answers according to category and page in recursive way
-    def parse_questions_category(self, response):
         target_info = self.get_question_res(response.meta['user_name'], response.meta['target_info'], response)
         page_enable = response.xpath("//li[contains(@class, 'next')]/@class")[0].extract()
         
         if page_enable.find("disabled") == -1:
             page_url = response.xpath("//li[contains(@class, 'next')]/a/@href")[0].extract()
             # send request to go to questions page for each page.
-            request = scrapy.Request(self.domain+page_url, callback=self.parse_questions_category)
+            request = scrapy.Request(self.domain+page_url, callback=self.parse_questions)
 
             request.meta['user_name'] = response.meta["user_name"]
             request.meta['target_info'] = response.meta['target_info']
-            request.meta['index'] = response.meta['index']
-            request.meta['urls'] = response.meta['urls']
             print "Scraping question data from " + self.domain+page_url + '\n'
             yield request
             return
         else:
-            if len(response.meta['urls']) > response.meta['index']:
-                
-                # send request to go to questions page for each category.
-                request = scrapy.Request(response.meta['urls'][response.meta['index']], callback=self.parse_questions_category)
-                print "Scraping question data from " + response.meta['urls'][response.meta['index']] + '\n'
-                request.meta['user_name'] = response.meta["user_name"]
-                request.meta['target_info'] = response.meta['target_info']
-                request.meta['index'] = response.meta['index'] + 1
-                request.meta['urls'] = response.meta['urls']
-                yield request
-            else:
-                self.save_as_csv(response.meta["user_name"], target_info)
-                print target_info
+            self.save_as_csv(response.meta["user_name"], target_info)
+            print target_info
 
     # get answers in one page
     def get_question_res(self, user_name, target_info, response):
@@ -311,6 +303,59 @@ class OKcuSpider(scrapy.Spider):
         element['value'] = value
 
         return element;
+
+    def download_images(self, user_name, response):
+        pic_path = self.directory + "/pictures"
+
+        print "Downloading user images...\n"
+        
+        #if folder does not exist, create it
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+
+        #if folder does not exist, create it
+        if not os.path.exists(pic_path):
+            os.makedirs(pic_path)
+
+        pictures = response.xpath("//div[contains(@class, '-thumb')]//img")
+        picture_urls = []
+        
+        for picture in pictures:
+            src = picture.xpath("./@data-src")
+            if len(src) == 0:
+                src = picture.xpath("./@src")
+            
+            picture_urls.append(src[0].extract())
+
+        return picture_urls
+
+    def request_for_image(self, response):
+
+        filename = response.meta['path']
+        with open(filename, 'wb') as f:
+            f.write(response.body)
+        
+    # get profile text about a target person like 
+    def parse_profile_text(self, user_name, target_info, response):
+        profile = response.xpath("//div[contains(@class, 'profilesection')]")[0]
+        
+        if profile.xpath("./@class")[0].extract().find("essays") != -1:
+            elements = profile.xpath("./div")
+            
+            for element in elements:
+                if len(element.xpath("./div[1]/text()")) > 0:
+                    title = element.xpath("./div[1]/text()")[0].extract().strip()
+                    content = element.xpath("./div[2]/text()")
+                    
+                    if title.encode('utf8') in self.profile_info.keys():
+                        content_text = ""
+                        for cnt_element in content:
+                            content_text = content_text + cnt_element.extract()
+                        profile_field_name = self.profile_info[title.encode('utf8')]
+                        target_info.append(self.get_info_element(user_name, profile_field_name, content_text))
+        
+        return target_info          
+        
 
     # get basic info about a target person like d_orientation, d_gender, d_relationship and d_bodytype
     def parse_basics(self, user_name, target_info, response):
@@ -416,17 +461,41 @@ class OKcuSpider(scrapy.Spider):
         #if folder does not exist, create it
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
+
+        #path for datafile
         path = self.directory + "/" + datetime.datetime.today().strftime("%Y-%m-%d") + ".csv"
-        
-        #open file for writing
+
+        #open datafile for writing
         with open(path, 'a') as f:
-                        #write each datapoint to the file at  the end
-                        for element in target_info:
-                            #make line
-                            temp = '"%s","%s","%s"\n' % (element["d_username"], element["field"], element["value"])
+            #write each datapoint to the file at the end
+            for element in target_info:
+                #make line
+                temp = '"%s","%s","%s"\n' % (element["d_username"], element["field"], element["value"])
 
-                            #unicode encoding
-                            temp = temp.encode('utf8')
+                #unicode encoding
+                temp = temp.encode('utf8')
 
-                            #write line
-                            f.write(temp)
+                #write line
+                f.write(temp)
+
+        #path for userfile
+        path = self.directory + "/users.csv"
+
+        #open userfile for writing
+        with open(path, 'a') as f:
+            #debug
+            #pdb.set_trace()
+
+            #count questions
+            fields = [x["field"] for x in target_info]              #find all fields
+            fields_regex = [re.search("^q", x) for x in fields]    #regex to find the questions, i.e. those beginning with q.
+            number_q = sum([x != None for x in fields_regex]) #count the number of matches
+
+            #make string
+            temp = '"%s","%d","%s"\n' % (target_info[0]["d_username"], number_q, datetime.datetime.today().strftime("%Y-%m-%d"))
+
+            #unicode encoding
+            temp = temp.encode('utf8')
+
+            #write line
+            f.write(temp)
