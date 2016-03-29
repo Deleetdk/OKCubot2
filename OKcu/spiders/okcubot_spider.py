@@ -104,9 +104,10 @@ class OKcuSpider(scrapy.Spider):
 					"experienced"	:	"p_exp",
 			}
 
-	def __init__(self, user, password):
+	def __init__(self, user, password, path):
 		self.user = user
 		self.password = password
+		self.directory = path
 
 		self.target_queue = dict()
 		self.target_info_queue = []
@@ -119,7 +120,7 @@ class OKcuSpider(scrapy.Spider):
 		self.monkey_patch_HTTPClientParser_statusReceived()
 
 	def start_requests(self):
-		self.directory = "data" # + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+		
 		return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
 
 	# scape users in recursive way until the number of user reaches max_people
@@ -328,7 +329,6 @@ class OKcuSpider(scrapy.Spider):
 				continue
 
 			picture_urls.append(src[0].extract())
-		print picture_urls
 		return picture_urls
 
 	def request_for_image(self, response):

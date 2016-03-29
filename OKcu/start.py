@@ -6,11 +6,21 @@ from scrapy.utils.project import get_project_settings
 
 from scrapy.crawler import CrawlerProcess
 from spiders.okcubot_spider import OKcuSpider
+import os
+
 
 
 
 if __name__ == '__main__':
-	
+	absolute_path = os.path.dirname(os.path.abspath(__file__))
+	path_seg = 	absolute_path.split('OKCubot2')
+	if len(path_seg) == 2:
+		data_path = path_seg[0] + "OKCubot2/" + "data/"
+	else:
+		data_path = "data/"
+
+	print data_path
+
 	user = ""
 	password = ""
 
@@ -23,6 +33,6 @@ if __name__ == '__main__':
 		exit()
 
 	crawler = CrawlerProcess(get_project_settings())
-	crawler.crawl(OKcuSpider, user = user, password = password)
+	crawler.crawl(OKcuSpider, user = user, password = password, path = data_path)
 
 	crawler.start()
