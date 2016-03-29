@@ -63,5 +63,10 @@ target/
 
 # downloaded data
 OKcu/data/*
+data/*
 *.csv
 *.jpeg
+
+# temporary files
+.*~
+

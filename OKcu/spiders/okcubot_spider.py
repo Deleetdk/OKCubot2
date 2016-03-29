@@ -1,3 +1,4 @@
+#import libraries
 import scrapy       #scrapy
 import csv              #to write to csv
 import json             #to parse json
@@ -7,6 +8,7 @@ import hashlib      #hashing
 import pdb              #interactive python debugger
 import re               #regex for counting number of questions
 
+#define functions
 class OKcuSpider(scrapy.Spider):
     name = "okcubot"
     index = 0
@@ -106,21 +108,23 @@ class OKcuSpider(scrapy.Spider):
                     "experienced"   :   "p_exp",
             }
 
-    def __init__(self, user, password):
+    def __init__(self, user, password, path):
         self.user = user
         self.password = password
+        self.directory = path
 
         self.target_queue = dict()
         self.target_info_queue = []
         
         # urls which scrape users from
         self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100"]
+        #first is men, second is women
 
         # Patch
         self.monkey_patch_HTTPClientParser_statusReceived()
 
     def start_requests(self):
-        self.directory = "data" # + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
 
     # scape users in recursive way until the number of user reaches max_people
@@ -322,15 +326,17 @@ class OKcuSpider(scrapy.Spider):
         
         for picture in pictures:
             src = picture.xpath("./@data-src")
+
             if len(src) == 0:
                 src = picture.xpath("./@src")
-            
-            picture_urls.append(src[0].extract())
+            if src[0].extract().find("82x82") != -1:
+                continue
 
+            picture_urls.append(src[0].extract())
         return picture_urls
 
     def request_for_image(self, response):
-
+        
         filename = response.meta['path']
         with open(filename, 'wb') as f:
             f.write(response.body)
@@ -455,6 +461,7 @@ class OKcuSpider(scrapy.Spider):
                 target_info.append(self.get_info_element(user_name, "lf_for", item[4:-1]))
 
         return target_info
+
 
     def save_as_csv(self, user_name, target_info):
         

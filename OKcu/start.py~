@@ -28,6 +28,7 @@ if __name__ == '__main__':
 	if len(sys.argv) == 3:
 		user = sys.argv[1]
 		password = sys.argv[2]
+		data_path = "~/OKCubot2/data/"
 	else:
 		print "Please supply a user and a password! (e.g. python start.py jack@gmail.com jackpassword)"
 		exit()
