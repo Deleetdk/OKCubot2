@@ -343,124 +343,155 @@ class OKcuSpider(scrapy.Spider):
         
     # get profile text about a target person like 
     def parse_profile_text(self, user_name, target_info, response):
-        profile = response.xpath("//div[contains(@class, 'profilesection')]")[0]
-        
-        if profile.xpath("./@class")[0].extract().find("essays") != -1:
-            elements = profile.xpath("./div")
-            
-            for element in elements:
-                if len(element.xpath("./div[1]/text()")) > 0:
-                    title = element.xpath("./div[1]/text()")[0].extract().strip()
-                    content = element.xpath("./div[2]/text()")
-                    
-                    if title.encode('utf8') in self.profile_info.keys():
-                        content_text = ""
-                        for cnt_element in content:
-                            content_text = content_text + cnt_element.extract()
-                        profile_field_name = self.profile_info[title.encode('utf8')]
-                        target_info.append(self.get_info_element(user_name, profile_field_name, content_text))
-        
-        return target_info          
+				profile = response.xpath("//div[contains(@class, 'profilesection')]")
+
+				# check whether there is a profile text part
+				if len(profile) > 0:
+						profile = profile[0]
+				else:
+						return
+
+				if profile.xpath("./@class")[0].extract().find("essays") != -1:
+						elements = profile.xpath("./div")
+
+						for element in elements:
+								if len(element.xpath("./div[1]/text()")) > 0:
+										title = element.xpath("./div[1]/text()")[0].extract().strip()
+										content = element.xpath("./div[2]/text()")
+								
+										if title.encode('utf8') in self.profile_info.keys():
+												content_text = ""
+												for cnt_element in content:
+												    content_text = content_text + cnt_element.extract()
+												profile_field_name = self.profile_info[title.encode('utf8')]
+												target_info.append(self.get_info_element(user_name, profile_field_name, content_text))
+
+				return target_info          
         
 
     # get basic info about a target person like d_orientation, d_gender, d_relationship and d_bodytype
     def parse_basics(self, user_name, target_info, response):
-        basics = response.xpath("//table[contains(@class, 'basics')]//td[2]/text()")[0].extract().strip().split(",")
+				basics = response.xpath("//table[contains(@class, 'basics')]//td[2]/text()")
 
-        for basic in basics:
-            basic = basic.strip()
-            flag = 0
-            for element in self.basic_info["basics"].keys():
-                for value in self.basic_info["basics"][element]:
-                    if basic.find(value) != -1:
-                        target_info.append(self.get_info_element(user_name, element, value))
-                        flag = 1
-                        break
+				# check whether there is a basic info part
+				if len(basics) > 0:
+						basics = basics[0].extract().strip().split(",")
+				else:
+						return
 
-                if flag == 1:
-                    break
+				for basic in basics:
+						basic = basic.strip()
+						flag = 0
+						for element in self.basic_info["basics"].keys():
+								for value in self.basic_info["basics"][element]:
+								    if basic.find(value) != -1:
+								        target_info.append(self.get_info_element(user_name, element, value))
+								        flag = 1
+								        break
 
-        return target_info
+								if flag == 1:
+								    break
+
+				return target_info
 
     # get background info like d_ethnicity, d_language, d_education_phase, d_education_type, d_religion_type and d_religion_seriousity
     def parse_background(self, user_name, target_info, response):
-        background = response.xpath("//table[contains(@class, 'background')]//td[2]/text()")[0].extract().strip().split(",")
-        
-        for bk in background:
-            bk = bk.strip()
-            if bk.find("Speaks") != -1:
-                target_info.append(self.get_info_element(user_name, "d_languages", bk[7:])) 
-                continue
-            flag = 0
-            for element in self.basic_info["background"].keys():
-                for value in self.basic_info["background"][element]:
-                    if bk.lower().find(value.lower()) != -1:
-                        target_info.append(self.get_info_element(user_name, element, value))
-                        if element != "d_education_phase" and element != "d_religion_type":
-                            flag = 1
-                        break
+				background = response.xpath("//table[contains(@class, 'background')]//td[2]/text()")
 
-                if flag == 1:
-                    break
-        return target_info
+				# check whether there is a background part
+				if len(background) > 0:
+						background = background[0].extract().strip().split(",")
+				else:
+						return
+
+				for bk in background:
+						bk = bk.strip()
+						if bk.find("Speaks") != -1:
+								target_info.append(self.get_info_element(user_name, "d_languages", bk[7:])) 
+								continue
+						flag = 0
+						for element in self.basic_info["background"].keys():
+								for value in self.basic_info["background"][element]:
+								    if bk.lower().find(value.lower()) != -1:
+								        target_info.append(self.get_info_element(user_name, element, value))
+								        if element != "d_education_phase" and element != "d_religion_type":
+								            flag = 1
+								        break
+
+								if flag == 1:
+								    break
+				return target_info
 
     # get background info like d_smokes, d_drinks, d_drugs, d_offspring_current and d_offspring_desires
     def parse_misc(self, user_name, target_info, response):
-        misc = response.xpath("//table[contains(@class, 'misc')]//td[2]/text()")[0].extract().strip().split(",")
-        
-        for ms in misc:
-            ms = ms.strip()
-            flag = 0
-            for element in self.basic_info["misc"].keys():
-                for value in self.basic_info["misc"][element]:
+				misc = response.xpath("//table[contains(@class, 'misc')]//td[2]/text()")
 
-                    if value.lower() in ms.lower():
+				# check whether there is a misc part
+				if len(misc) > 0:
+						misc = misc[0].extract().strip().split(",")
+				else:
+						return
 
-                        if (value == "Sometimes" or value == "Never") and ms.lower().find(element[2:-2]) == -1:
-                            break 
-                        
-                        if value.lower() == "doesn": 
-                            if element == "d_drugs" and ms.find('drugs') != -1:
-                                value = "No"
-                            elif element == "d_offspring_current" and ms.find('have') != -1:
-                                value = "No kids"
-                            elif element == "d_offspring_desires" and ms.find('want') != -1:
-                                value = "Doesn't want kids"
-                            else:
-                                break                   
-                        
-                        if value.lower() == "might want" or value.lower() == "wants":
-                            value += " kids"
-                        target_info.append(self.get_info_element(user_name, element, value))
+				for ms in misc:
+						ms = ms.strip()
+						flag = 0
+						for element in self.basic_info["misc"].keys():
+								for value in self.basic_info["misc"][element]:
 
-                        if element != "d_offspring_current":
-                            flag = 1
-                        break
+								    if value.lower() in ms.lower():
 
-                if flag == 1:
-                    break
-        
-        return target_info
+								        if (value == "Sometimes" or value == "Never") and ms.lower().find(element[2:-2]) == -1:
+								            break 
+								        
+								        if value.lower() == "doesn": 
+								            if element == "d_drugs" and ms.find('drugs') != -1:
+								                value = "No"
+								            elif element == "d_offspring_current" and ms.find('have') != -1:
+								                value = "No kids"
+								            elif element == "d_offspring_desires" and ms.find('want') != -1:
+								                value = "Doesn't want kids"
+								            else:
+								                break                   
+								        
+								        if value.lower() == "might want" or value.lower() == "wants":
+								            value += " kids"
+								        target_info.append(self.get_info_element(user_name, element, value))
 
-    # parse looking for paragraph.
+								        if element != "d_offspring_current":
+								            flag = 1
+								        break
+
+								if flag == 1:
+								    break
+
+				return target_info
+
+    # parse looking-for paragraph.
     def parse_ideal_person(self, user_name, target_info, response):
-        sentence = response.xpath("//div[contains(@class, 'sentence')]/text()")[0].extract().strip().split(",")
-        for item in sentence:
-            item = item.strip()
-            if item.find('single') != -1:
-                target_info.append(self.get_info_element(user_name, "lf_single", "single"))
-            elif item.find('near me') != -1:
-                target_info.append(self.get_info_element(user_name, "lf_location", "near me"))
-            elif item.find('ages') != -1:
-                age_range = item.split(' ')[1]
-                min_age, max_age = age_range[:2], age_range[3:]
-                
-                target_info.append(self.get_info_element(user_name, "lf_min_age", min_age))
-                target_info.append(self.get_info_element(user_name, "lf_max_age", max_age))
-            elif item.find('for') != -1:
-                target_info.append(self.get_info_element(user_name, "lf_for", item[4:-1]))
+				sentence = response.xpath("//div[contains(@class, 'sentence')]/text()")
 
-        return target_info
+				# check whether there is a looking-for paragraph
+				if len(sentence) > 0:
+						sentence = sentence[0].extract().strip().split(",")
+				else:
+						return
+
+				for item in sentence:
+						item = item.strip()
+						if item.find('single') != -1:
+								target_info.append(self.get_info_element(user_name, "lf_single", "single"))
+						elif item.find('near me') != -1:
+								target_info.append(self.get_info_element(user_name, "lf_location", "near me"))
+						elif item.find('ages') != -1:
+								age_range = item.split(' ')[1]
+								min_age, max_age = age_range[:2], age_range[3:]
+								
+								target_info.append(self.get_info_element(user_name, "lf_min_age", min_age))
+								target_info.append(self.get_info_element(user_name, "lf_max_age", max_age))
+						elif item.find('for') != -1:
+								target_info.append(self.get_info_element(user_name, "lf_for", item[4:-1]))
+
+				return target_info
 
 
     def save_as_csv(self, user_name, target_info):
