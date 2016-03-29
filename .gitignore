@@ -68,5 +68,5 @@ data/*
 *.jpeg
 
 # temporary files
-.*~
+*.py~
 
