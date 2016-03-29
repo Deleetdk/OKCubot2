@@ -12,7 +12,6 @@ import re               #regex for counting number of questions
 class OKcuSpider(scrapy.Spider):
     name = "okcubot"
     index = 0
-    max_people = 1
     domain = "https://www.okcupid.com"
 
     profile_info = {
@@ -108,20 +107,22 @@ class OKcuSpider(scrapy.Spider):
                     "experienced"   :   "p_exp",
             }
 
-    def __init__(self, user, password, path):
-        self.user = user
-        self.password = password
-        self.directory = path
+    def __init__(self, user, password, path, max_num):
+				self.user = user
+				self.password = password
+				self.directory = path
 
-        self.target_queue = dict()
-        self.target_info_queue = []
-        
-        # urls which scrape users from
-        self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100"]
-        #first is men, second is women
+				self.target_queue = dict()
+				self.target_info_queue = []
 
-        # Patch
-        self.monkey_patch_HTTPClientParser_statusReceived()
+				self.max_people = max_num
+
+				# urls which scrape users from
+				self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100"]
+				#first is men, second is women
+
+				# Patch
+				self.monkey_patch_HTTPClientParser_statusReceived()
 
     def start_requests(self):
         
