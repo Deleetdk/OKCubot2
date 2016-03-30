@@ -134,7 +134,7 @@ class OKcuSpider(scrapy.Spider):
 					self.target_queue[self.target_user] = self.domain + "/profile/" + self.target_user + "?cf=regular"
 					return [request]
 				else:
-        	return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
+					return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
 
     # scape users in recursive way until the number of user reaches max_people
     def get_target(self, response):
@@ -411,6 +411,7 @@ class OKcuSpider(scrapy.Spider):
 				if len(background) > 0:
 						background = background[0].extract().strip().split(",")
 				else:
+						return target_info
 						return
 
 				for bk in background:
@@ -439,6 +440,7 @@ class OKcuSpider(scrapy.Spider):
 				if len(misc) > 0:
 						misc = misc[0].extract().strip().split(",")
 				else:
+						return target_info
 						return
 
 				for ms in misc:
@@ -483,6 +485,7 @@ class OKcuSpider(scrapy.Spider):
 				if len(sentence) > 0:
 						sentence = sentence[0].extract().strip().split(",")
 				else:
+						return target_info
 						return
 
 				for item in sentence:

@@ -358,7 +358,7 @@ class OKcuSpider(scrapy.Spider):
 				if len(profile) > 0:
 						profile = profile[0]
 				else:
-						return
+						return target_info
 
 				if profile.xpath("./@class")[0].extract().find("essays") != -1:
 						elements = profile.xpath("./div")
@@ -411,7 +411,7 @@ class OKcuSpider(scrapy.Spider):
 				if len(background) > 0:
 						background = background[0].extract().strip().split(",")
 				else:
-						return
+						return target_info
 
 				for bk in background:
 						bk = bk.strip()
@@ -439,7 +439,7 @@ class OKcuSpider(scrapy.Spider):
 				if len(misc) > 0:
 						misc = misc[0].extract().strip().split(",")
 				else:
-						return
+						return target_info
 
 				for ms in misc:
 						ms = ms.strip()
@@ -483,7 +483,7 @@ class OKcuSpider(scrapy.Spider):
 				if len(sentence) > 0:
 						sentence = sentence[0].extract().strip().split(",")
 				else:
-						return
+						return target_info
 
 				for item in sentence:
 						item = item.strip()
