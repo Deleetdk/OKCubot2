@@ -20,6 +20,7 @@ if __name__ == '__main__':
 	parser.add_argument('user', nargs='+', help='set a user and a password! (e.g. python start.py jack@gmail.com jackpassword)')	
 	parser.add_argument('--o', nargs='?', help='the path for saving data', dest="path")
 	parser.add_argument('--n', nargs='?', help='the max number of people who the program scrape data, this must be number.', dest="num", type=int)
+	parser.add_argument('--u', nargs='?', help='a user name to be scraped', dest="target_user")
 
 	# parse arguments
 	args = parser.parse_args()
@@ -50,7 +51,12 @@ if __name__ == '__main__':
 	else:
 		num = 1 # the default max number
 
+	if args.target_user is not None:
+		target_user = args.target_user
+	else:
+		target_user = None
+
 	crawler = CrawlerProcess(get_project_settings())
-	crawler.crawl(OKcuSpider, user = user, password = password, path = data_path, max_num=num)
+	crawler.crawl(OKcuSpider, user = user, password = password, path = data_path, max_num=num, target_user=target_user)
 
 	crawler.start()

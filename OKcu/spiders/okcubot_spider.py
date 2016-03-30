@@ -107,10 +107,11 @@ class OKcuSpider(scrapy.Spider):
                     "experienced"   :   "p_exp",
             }
 
-    def __init__(self, user, password, path, max_num):
+    def __init__(self, user, password, path, max_num, target_user):
 				self.user = user
 				self.password = password
 				self.directory = path
+				self.target_user = target_user
 
 				self.target_queue = dict()
 				self.target_info_queue = []
@@ -125,8 +126,15 @@ class OKcuSpider(scrapy.Spider):
 				self.monkey_patch_HTTPClientParser_statusReceived()
 
     def start_requests(self):
-        
-        return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
+				if self.target_user != None:
+					request = scrapy.FormRequest("https://www.okcupid.com/login",
+									formdata={'username': self.user, 'password': self.password},
+									callback=self.logged_in)
+
+					self.target_queue[self.target_user] = self.domain + "/profile/" + self.target_user + "?cf=regular"
+					return [request]
+				else:
+					return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
 
     # scape users in recursive way until the number of user reaches max_people
     def get_target(self, response):

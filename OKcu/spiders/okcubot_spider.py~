@@ -107,26 +107,34 @@ class OKcuSpider(scrapy.Spider):
                     "experienced"   :   "p_exp",
             }
 
-    def __init__(self, user, password, path, max_num):
+    def __init__(self, user, password, path, max_num, target_user):
 				self.user = user
 				self.password = password
 				self.directory = path
+				self.target_user = target_user
 
 				self.target_queue = dict()
 				self.target_info_queue = []
 
 				self.max_people = max_num
 
-        # urls which scrape users from
-        self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100"]
-        #first is men, second is women
+				# urls which scrape users from
+				self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100"]
+				#first is men, second is women
 
-        # Patch
-        self.monkey_patch_HTTPClientParser_statusReceived()
+				# Patch
+				self.monkey_patch_HTTPClientParser_statusReceived()
 
     def start_requests(self):
-        
-        return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
+				if self.target_user != None:
+					request = scrapy.FormRequest("https://www.okcupid.com/login",
+									formdata={'username': self.user, 'password': self.password},
+									callback=self.logged_in)
+
+					self.target_queue[self.target_user] = self.domain + "/profile/" + self.target_user + "?cf=regular"
+					return [request]
+				else:
+        	return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
 
     # scape users in recursive way until the number of user reaches max_people
     def get_target(self, response):
