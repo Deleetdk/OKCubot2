@@ -185,14 +185,15 @@ class OKcuSpider(scrapy.Spider):
 				    path = self.directory + "/users.csv"
 
 				    file_users = []
-				    with open(path, "rb") as f:
-						    file_users = f.readlines()
+				    if os.path.exists(path):
+								with open(path, "rb") as f:
+										file_users = f.readlines()
 
-				    for usr in file_users:
-						    usr_info = usr.split(",")
-						    if usr_info[0][1:-1] == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
-						        print "%s is skipped." % response.meta["user_name"]
-						        return
+								for usr in file_users:
+										usr_info = usr.split(",")
+										if usr_info[0][1:-1] == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
+										    print "%s is skipped." % response.meta["user_name"]
+										    return
 				
 				url = self.target_queue[response.meta["user_name"]]
 
