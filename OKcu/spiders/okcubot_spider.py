@@ -107,11 +107,12 @@ class OKcuSpider(scrapy.Spider):
                     "experienced"   :   "p_exp",
             }
 
-    def __init__(self, user, password, path, max_num, target_user):
+    def __init__(self, user, password, path, max_num, target_user, noskip):
 				self.user = user
 				self.password = password
 				self.directory = path
 				self.target_user = target_user
+				self.noskip = noskip
 
 				self.target_queue = dict()
 				self.target_info_queue = []
@@ -165,9 +166,39 @@ class OKcuSpider(scrapy.Spider):
         for user_name in self.target_queue.keys():
             print "\nStarting to scrapy %s's data.\n" % user_name
             print "Scraping basic data from %s\n" % self.target_queue[user_name]
-            request = scrapy.Request(self.target_queue[user_name], callback=self.parse_user_info)   
+
+            if self.noskip is False:
+                url = self.target_queue[user_name][:-11] + "/questions"
+                request = scrapy.Request(url, callback=self.check_skip) 
+            else:
+                request = scrapy.Request(self.target_queue[user_name], callback=self.parse_user_info) 
+  
             request.meta['user_name'] = user_name           
             yield request
+
+    def check_skip(self, response):
+				answer_num = response.xpath("//p[@class='medium']/text()")
+				
+				if len(answer_num) > 0:
+				    answer_num = answer_num[0].extract().strip().split(' ')[0]
+						
+				    path = self.directory + "/users.csv"
+
+				    file_users = []
+				    with open(path, "rb") as f:
+						    file_users = f.readlines()
+
+				    for usr in file_users:
+						    usr_info = usr.split(",")
+						    if usr_info[0][1:-1] == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
+						        print "%s is skipped." % response.meta["user_name"]
+						        return
+				
+				url = self.target_queue[response.meta["user_name"]]
+
+				request = scrapy.Request(url, callback=self.parse_user_info, dont_filter=True) 
+				request.meta['user_name'] = response.meta["user_name"]
+				yield request
 
     # parse target user info
     def parse_user_info(self, response):
@@ -253,7 +284,7 @@ class OKcuSpider(scrapy.Spider):
         
         # send request to go to questions page.
         url = self.target_queue[response.meta['user_name']][:-11] + "/questions"
-        request = scrapy.Request(url, callback=self.parse_questions)
+        request = scrapy.Request(url, callback=self.parse_questions, dont_filter=True)
 
         request.meta['user_name'] = response.meta["user_name"]
         request.meta['target_info'] = target_info
@@ -334,14 +365,20 @@ class OKcuSpider(scrapy.Spider):
         picture_urls = []
         
         for picture in pictures:
-            src = picture.xpath("./@data-src")
+						src = picture.xpath("./@data-src")
+						class_name = picture.xpath("./@class")
 
-            if len(src) == 0:
-                src = picture.xpath("./@src")
-            if src[0].extract().find("82x82") != -1:
-                continue
-
-            picture_urls.append(src[0].extract())
+						if len(src) == 0:
+								src = picture.xpath("./@src")
+						if src[0].extract().find("82x82") != -1:
+								continue
+						
+						pic_url = src[0].extract().replace('225', '0')
+						if len(class_name) > 0 and class_name[0].extract() == "active":
+								picture_urls.insert(0, pic_url)
+						else:
+								picture_urls.append(pic_url)
+		
         return picture_urls
 
     def request_for_image(self, response):

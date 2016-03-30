@@ -21,6 +21,7 @@ if __name__ == '__main__':
 	parser.add_argument('--o', nargs='?', help='the path for saving data', dest="path")
 	parser.add_argument('--n', nargs='?', help='the max number of people who the program scrape data, this must be number.', dest="num", type=int)
 	parser.add_argument('--u', nargs='?', help='a user name to be scraped', dest="target_user")
+	parser.add_argument('--noskip', help='don\'t skip a user who was scraped before', dest="noskip", action="store_true")
 
 	# parse arguments
 	args = parser.parse_args()
@@ -51,12 +52,10 @@ if __name__ == '__main__':
 	else:
 		num = 1 # the default max number
 
-	if args.target_user is not None:
-		target_user = args.target_user
-	else:
-		target_user = None
+	target_user = args.target_user
+	noskip = args.noskip
 
 	crawler = CrawlerProcess(get_project_settings())
-	crawler.crawl(OKcuSpider, user = user, password = password, path = data_path, max_num=num, target_user=target_user)
+	crawler.crawl(OKcuSpider, user = user, password = password, path = data_path, max_num=num, target_user=target_user, noskip=noskip)
 
 	crawler.start()
