@@ -185,7 +185,7 @@ class OKcuSpider(scrapy.Spider):
 				    path = self.directory + "/users.csv"
 
 				    file_users = []
-						if os.path.exists(path):
+				    if os.path.exists(path):
 								with open(path, "rb") as f:
 										file_users = f.readlines()
 
@@ -194,11 +194,15 @@ class OKcuSpider(scrapy.Spider):
 										if usr_info[0][1:-1] == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
 										    print "%s is skipped." % response.meta["user_name"]
 										    return
+				else:
+						answer_num = 0
 				
 				url = self.target_queue[response.meta["user_name"]]
 
 				request = scrapy.Request(url, callback=self.parse_user_info, dont_filter=True) 
 				request.meta['user_name'] = response.meta["user_name"]
+				request.meta['answer_num'] = answer_num
+
 				yield request
 
     # parse target user info
@@ -206,6 +210,8 @@ class OKcuSpider(scrapy.Spider):
         target_info = []
         
         target_age = response.xpath("//span[contains(@class, 'basics-asl-age')]/text()")[0].extract()
+				
+				target_info.append(self.get_info_element(response.meta["user_name"], "m_numberanswered", response.meta["answer_num"]))
         target_info.append(self.get_info_element(response.meta["user_name"], "d_age", target_age))
 
         target_location = response.xpath("//span[contains(@class, 'basics-asl-location')]/text()")[0].extract()
