@@ -120,7 +120,7 @@ class OKcuSpider(scrapy.Spider):
 				self.max_people = max_num
 
 				# urls which scrape users from
-				self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=100"]
+				self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=50", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=50"]
 				#first is men, second is women
 
 				# Patch
@@ -156,6 +156,10 @@ class OKcuSpider(scrapy.Spider):
             user_href = user.xpath("./@href")[0].extract()
             if user_name not in self.target_queue.keys():
                 self.target_queue[user_name] = self.domain + user_href
+
+            #diagnostic
+            msg = "Building user list to scrape: %d users found" % len(self.target_queue)
+            print(msg)
 
         request = scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)
         self.index == (self.index + 1) % 3
@@ -211,7 +215,7 @@ class OKcuSpider(scrapy.Spider):
         
         target_age = response.xpath("//span[contains(@class, 'basics-asl-age')]/text()")[0].extract()
 				
-        target_info.append(self.get_info_element(response.meta["user_name"], "m_numberanswered", response.meta["answer_num"]))
+        # target_info.append(self.get_info_element(response.meta["user_name"], "m_numberanswered", response.meta["answer_num"]))
         target_info.append(self.get_info_element(response.meta["user_name"], "d_age", target_age))
 
         target_location = response.xpath("//span[contains(@class, 'basics-asl-location')]/text()")[0].extract()
@@ -314,8 +318,8 @@ class OKcuSpider(scrapy.Spider):
             yield request
             return
         else:
-            self.save_as_csv(response.meta["user_name"], target_info)
-            print target_info
+            self.save_as_csv(response.meta["user_name"], target_info, response)
+            #print target_info
 
     # get answers in one page
     def get_question_res(self, user_name, target_info, response):
@@ -547,7 +551,7 @@ class OKcuSpider(scrapy.Spider):
 				return target_info
 
 
-    def save_as_csv(self, user_name, target_info):
+    def save_as_csv(self, user_name, target_info, response):
         
         #if folder does not exist, create it
         if not os.path.exists(self.directory):
@@ -560,6 +564,14 @@ class OKcuSpider(scrapy.Spider):
         with open(path, 'a') as f:
             #write each datapoint to the file at the end
             for element in target_info:
+                #clean value if it is a string, change double quotes to single quotes, recode newlines
+                # pdb.set_trace()
+                
+                if type(element["value"]) is unicode:
+                    # start debug
+                    # pdb.set_trace()
+                    element["value"] = element["value"].replace('"', "'").replace("\n","%NEWLINE%")
+
                 #make line
                 temp = '"%s","%s","%s"\n' % (element["d_username"], element["field"], element["value"])
 
@@ -575,18 +587,24 @@ class OKcuSpider(scrapy.Spider):
         #open userfile for writing
         with open(path, 'a') as f:
             #debug
-            #pdb.set_trace()
+            # pdb.set_trace()
 
             #count questions
-            fields = [x["field"] for x in target_info]              #find all fields
-            fields_regex = [re.search("^q", x) for x in fields]    #regex to find the questions, i.e. those beginning with q.
-            number_q = sum([x != None for x in fields_regex]) #count the number of matches
+            # fields = [x["field"] for x in target_info]              #find all fields
+            # fields_regex = [re.search("^q", x) for x in fields]    #regex to find the questions, i.e. those beginning with q.
+            # number_q = sum([x != None for x in fields_regex]) #count the number of matches
+            answer_num = response.xpath("//p[@class='medium']/text()")
+            answer_num = answer_num[0].extract().strip().split(' ')[0]
 
             #make string
-            temp = '"%s","%d","%s"\n' % (target_info[0]["d_username"], number_q, datetime.datetime.today().strftime("%Y-%m-%d"))
+            temp = '"%s","%s","%s"\n' % (target_info[0]["d_username"], answer_num, datetime.datetime.today().strftime("%Y-%m-%d"))
 
             #unicode encoding
             temp = temp.encode('utf8')
 
             #write line
             f.write(temp)
+
+            #message
+            msg = "Saving user %s with %s questions" % (target_info[0]["d_username"], answer_num)
+            print(msg)

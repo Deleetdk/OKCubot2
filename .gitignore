@@ -70,3 +70,6 @@ data/*
 # temporary files
 *.py~
 
+#bash scripts
+*.sh
+
