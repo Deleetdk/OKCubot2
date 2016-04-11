@@ -328,8 +328,14 @@ class OKcuSpider(scrapy.Spider):
     def get_question_res(self, user_name, target_info, response):
         questions = response.xpath("//div[contains(@class, 'question')]")
         for question in questions:
-            answer = question.xpath(".//p[contains(@class, 'target')]//span[1]/text()")[0].extract().strip()
-            temp = question.xpath("./@data-qid")
+            # pdb.set_trace()
+            #try block, catches if the user has no answers at all
+            try:
+                answer = question.xpath(".//p[contains(@class, 'target')]//span[1]/text()")[0].extract().strip()
+                temp = question.xpath("./@data-qid")
+            except:
+                return target_info
+
             if answer != "Answer publicly to see my answer" and len(temp) > 0:
                 ques_label = "q"+question.xpath("./@data-qid")[0].extract()
                 target_info.append(self.get_info_element(user_name, ques_label, answer))
