@@ -196,8 +196,8 @@ class OKcuSpider(scrapy.Spider):
 
                         for usr in file_users:
                                 usr_info = usr.split(",")
-                                pdb.set_trace()
-                                if usr_info[0][1:-1] == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
+                                # pdb.set_trace()
+                                if usr_info[0][1:-1].decode("utf8") == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
                                     print "%s is skipped." % response.meta["user_name"]
                                     return
         else:
