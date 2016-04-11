@@ -108,34 +108,34 @@ class OKcuSpider(scrapy.Spider):
             }
 
     def __init__(self, user, password, path, max_num, target_user, noskip):
-				self.user = user
-				self.password = password
-				self.directory = path
-				self.target_user = target_user
-				self.noskip = noskip
+                self.user = user
+                self.password = password
+                self.directory = path
+                self.target_user = target_user
+                self.noskip = noskip
 
-				self.target_queue = dict()
-				self.target_info_queue = []
+                self.target_queue = dict()
+                self.target_info_queue = []
 
-				self.max_people = max_num
+                self.max_people = max_num
 
-				# urls which scrape users from
-				self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=50", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=50"]
-				#first is men, second is women
+                # urls which scrape users from
+                self.url_list = ["https://www.okcupid.com/match?filter1=0,16&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=50", "https://www.okcupid.com/match?filter1=0,32&filter2=2,18,99&filter3=1,1&locid=0&timekey=1&fromWhoOnline=0&mygender=&update_prefs=1&sort_type=0&sa=1&count=50"]
+                #first is men, second is women
 
-				# Patch
-				self.monkey_patch_HTTPClientParser_statusReceived()
+                # Patch
+                self.monkey_patch_HTTPClientParser_statusReceived()
 
     def start_requests(self):
-				if self.target_user != None:
-					request = scrapy.FormRequest("https://www.okcupid.com/login",
-									formdata={'username': self.user, 'password': self.password},
-									callback=self.logged_in)
+                if self.target_user != None:
+                    request = scrapy.FormRequest("https://www.okcupid.com/login",
+                                    formdata={'username': self.user, 'password': self.password},
+                                    callback=self.logged_in)
 
-					self.target_queue[self.target_user] = self.domain + "/profile/" + self.target_user + "?cf=regular"
-					return [request]
-				else:
-					return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
+                    self.target_queue[self.target_user] = self.domain + "/profile/" + self.target_user + "?cf=regular"
+                    return [request]
+                else:
+                    return [scrapy.Request(self.url_list[0], callback=self.get_target, dont_filter=True)]
 
     # scape users in recursive way until the number of user reaches max_people
     def get_target(self, response):
@@ -180,41 +180,44 @@ class OKcuSpider(scrapy.Spider):
             request.meta['user_name'] = user_name           
             yield request
 
-    def check_skip(self, response):
-				answer_num = response.xpath("//p[@class='medium']/text()")
-				
-				if len(answer_num) > 0:
-				    answer_num = answer_num[0].extract().strip().split(' ')[0]
-						
-				    path = self.directory + "/users.csv"
+    def check_skip(self, response):     
+        answer_num = response.xpath("//p[@class='medium']/text()")
+        
+        if len(answer_num) > 0:
+            answer_num = answer_num[0].extract().strip().split(' ')[0]
+                
+            path = self.directory + "/users.csv"
 
-				    file_users = []
-				    if os.path.exists(path):
-								with open(path, "rb") as f:
-										file_users = f.readlines()
+            file_users = []
+            # pdb.set_trace()
+            if os.path.exists(path):
+                        with open(path, "rb") as f:
+                                file_users = f.readlines()
 
-								for usr in file_users:
-										usr_info = usr.split(",")
-										if usr_info[0][1:-1] == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
-										    print "%s is skipped." % response.meta["user_name"]
-										    return
-				else:
-						answer_num = 0
-				
-				url = self.target_queue[response.meta["user_name"]]
+                        for usr in file_users:
+                                usr_info = usr.split(",")
+                                pdb.set_trace()
+                                if usr_info[0][1:-1] == response.meta["user_name"] and usr_info[1][1:-1] == answer_num:
+                                    print "%s is skipped." % response.meta["user_name"]
+                                    return
+        else:
+                answer_num = 0
+        
+        url = self.target_queue[response.meta["user_name"]]
 
-				request = scrapy.Request(url, callback=self.parse_user_info, dont_filter=True) 
-				request.meta['user_name'] = response.meta["user_name"]
-				request.meta['answer_num'] = answer_num
+        request = scrapy.Request(url, callback=self.parse_user_info, dont_filter=True) 
+        # pdb.set_trace()
+        request.meta['user_name'] = response.meta["user_name"]
+        request.meta['answer_num'] = answer_num
 
-				yield request
+        yield request
 
     # parse target user info
     def parse_user_info(self, response):
         target_info = []
         
         target_age = response.xpath("//span[contains(@class, 'basics-asl-age')]/text()")[0].extract()
-				
+                
         # target_info.append(self.get_info_element(response.meta["user_name"], "m_numberanswered", response.meta["answer_num"]))
         target_info.append(self.get_info_element(response.meta["user_name"], "d_age", target_age))
 
@@ -233,7 +236,7 @@ class OKcuSpider(scrapy.Spider):
         for url in urls:
             index += 1
             path = self.directory + "/pictures"
-
+            
             hash_object = hashlib.md5(response.meta["user_name"].encode('utf8'))
             path += "/" + hash_object.hexdigest() + "_" + str(index) + ".jpg"           
 
@@ -376,20 +379,20 @@ class OKcuSpider(scrapy.Spider):
         picture_urls = []
         
         for picture in pictures:
-						src = picture.xpath("./@data-src")
-						class_name = picture.xpath("./@class")
+                        src = picture.xpath("./@data-src")
+                        class_name = picture.xpath("./@class")
 
-						if len(src) == 0:
-								src = picture.xpath("./@src")
-						if src[0].extract().find("82x82") != -1:
-								continue
-						
-						pic_url = src[0].extract().replace('225', '0')
-						if len(class_name) > 0 and class_name[0].extract() == "active":
-								picture_urls.insert(0, pic_url)
-						else:
-								picture_urls.append(pic_url)
-		
+                        if len(src) == 0:
+                                src = picture.xpath("./@src")
+                        if src[0].extract().find("82x82") != -1:
+                                continue
+                        
+                        pic_url = src[0].extract().replace('225', '0')
+                        if len(class_name) > 0 and class_name[0].extract() == "active":
+                                picture_urls.insert(0, pic_url)
+                        else:
+                                picture_urls.append(pic_url)
+        
         return picture_urls
 
     def request_for_image(self, response):
@@ -400,155 +403,155 @@ class OKcuSpider(scrapy.Spider):
         
     # get profile text about a target person like 
     def parse_profile_text(self, user_name, target_info, response):
-				profile = response.xpath("//div[contains(@class, 'profilesection')]")
+                profile = response.xpath("//div[contains(@class, 'profilesection')]")
 
-				# check whether there is a profile text part
-				if len(profile) > 0:
-						profile = profile[0]
-				else:
-						return target_info
+                # check whether there is a profile text part
+                if len(profile) > 0:
+                        profile = profile[0]
+                else:
+                        return target_info
 
-				if profile.xpath("./@class")[0].extract().find("essays") != -1:
-						elements = profile.xpath("./div")
+                if profile.xpath("./@class")[0].extract().find("essays") != -1:
+                        elements = profile.xpath("./div")
 
-						for element in elements:
-								if len(element.xpath("./div[1]/text()")) > 0:
-										title = element.xpath("./div[1]/text()")[0].extract().strip()
-										content = element.xpath("./div[2]/text()")
-								
-										if title.encode('utf8') in self.profile_info.keys():
-												content_text = ""
-												for cnt_element in content:
-												    content_text = content_text + cnt_element.extract()
-												profile_field_name = self.profile_info[title.encode('utf8')]
-												target_info.append(self.get_info_element(user_name, profile_field_name, content_text))
+                        for element in elements:
+                                if len(element.xpath("./div[1]/text()")) > 0:
+                                        title = element.xpath("./div[1]/text()")[0].extract().strip()
+                                        content = element.xpath("./div[2]/text()")
+                                
+                                        if title.encode('utf8') in self.profile_info.keys():
+                                                content_text = ""
+                                                for cnt_element in content:
+                                                    content_text = content_text + cnt_element.extract()
+                                                profile_field_name = self.profile_info[title.encode('utf8')]
+                                                target_info.append(self.get_info_element(user_name, profile_field_name, content_text))
 
-				return target_info          
+                return target_info          
         
 
     # get basic info about a target person like d_orientation, d_gender, d_relationship and d_bodytype
     def parse_basics(self, user_name, target_info, response):
-				basics = response.xpath("//table[contains(@class, 'basics')]//td[2]/text()")
+                basics = response.xpath("//table[contains(@class, 'basics')]//td[2]/text()")
 
-				# check whether there is a basic info part
-				if len(basics) > 0:
-						basics = basics[0].extract().strip().split(",")
-				else:
-						return
+                # check whether there is a basic info part
+                if len(basics) > 0:
+                        basics = basics[0].extract().strip().split(",")
+                else:
+                        return
 
-				for basic in basics:
-						basic = basic.strip()
-						flag = 0
-						for element in self.basic_info["basics"].keys():
-								for value in self.basic_info["basics"][element]:
-								    if basic.find(value) != -1:
-								        target_info.append(self.get_info_element(user_name, element, value))
-								        flag = 1
-								        break
+                for basic in basics:
+                        basic = basic.strip()
+                        flag = 0
+                        for element in self.basic_info["basics"].keys():
+                                for value in self.basic_info["basics"][element]:
+                                    if basic.find(value) != -1:
+                                        target_info.append(self.get_info_element(user_name, element, value))
+                                        flag = 1
+                                        break
 
-								if flag == 1:
-								    break
+                                if flag == 1:
+                                    break
 
-				return target_info
+                return target_info
 
     # get background info like d_ethnicity, d_language, d_education_phase, d_education_type, d_religion_type and d_religion_seriousity
     def parse_background(self, user_name, target_info, response):
-				background = response.xpath("//table[contains(@class, 'background')]//td[2]/text()")
+                background = response.xpath("//table[contains(@class, 'background')]//td[2]/text()")
 
-				# check whether there is a background part
-				if len(background) > 0:
-						background = background[0].extract().strip().split(",")
-				else:
-						return target_info
+                # check whether there is a background part
+                if len(background) > 0:
+                        background = background[0].extract().strip().split(",")
+                else:
+                        return target_info
 
-				for bk in background:
-						bk = bk.strip()
-						if bk.find("Speaks") != -1:
-								target_info.append(self.get_info_element(user_name, "d_languages", bk[7:])) 
-								continue
-						flag = 0
-						for element in self.basic_info["background"].keys():
-								for value in self.basic_info["background"][element]:
-								    if bk.lower().find(value.lower()) != -1:
-								        target_info.append(self.get_info_element(user_name, element, value))
-								        if element != "d_education_phase" and element != "d_religion_type":
-								            flag = 1
-								        break
+                for bk in background:
+                        bk = bk.strip()
+                        if bk.find("Speaks") != -1:
+                                target_info.append(self.get_info_element(user_name, "d_languages", bk[7:])) 
+                                continue
+                        flag = 0
+                        for element in self.basic_info["background"].keys():
+                                for value in self.basic_info["background"][element]:
+                                    if bk.lower().find(value.lower()) != -1:
+                                        target_info.append(self.get_info_element(user_name, element, value))
+                                        if element != "d_education_phase" and element != "d_religion_type":
+                                            flag = 1
+                                        break
 
-								if flag == 1:
-								    break
-				return target_info
+                                if flag == 1:
+                                    break
+                return target_info
 
     # get background info like d_smokes, d_drinks, d_drugs, d_offspring_current and d_offspring_desires
     def parse_misc(self, user_name, target_info, response):
-				misc = response.xpath("//table[contains(@class, 'misc')]//td[2]/text()")
+                misc = response.xpath("//table[contains(@class, 'misc')]//td[2]/text()")
 
-				# check whether there is a misc part
-				if len(misc) > 0:
-						misc = misc[0].extract().strip().split(",")
-				else:
-						return target_info
+                # check whether there is a misc part
+                if len(misc) > 0:
+                        misc = misc[0].extract().strip().split(",")
+                else:
+                        return target_info
 
-				for ms in misc:
-						ms = ms.strip()
-						flag = 0
-						for element in self.basic_info["misc"].keys():
-								for value in self.basic_info["misc"][element]:
+                for ms in misc:
+                        ms = ms.strip()
+                        flag = 0
+                        for element in self.basic_info["misc"].keys():
+                                for value in self.basic_info["misc"][element]:
 
-								    if value.lower() in ms.lower():
+                                    if value.lower() in ms.lower():
 
-								        if (value == "Sometimes" or value == "Never") and ms.lower().find(element[2:-2]) == -1:
-								            break 
-								        
-								        if value.lower() == "doesn": 
-								            if element == "d_drugs" and ms.find('drugs') != -1:
-								                value = "No"
-								            elif element == "d_offspring_current" and ms.find('have') != -1:
-								                value = "No kids"
-								            elif element == "d_offspring_desires" and ms.find('want') != -1:
-								                value = "Doesn't want kids"
-								            else:
-								                break                   
-								        
-								        if value.lower() == "might want" or value.lower() == "wants":
-								            value += " kids"
-								        target_info.append(self.get_info_element(user_name, element, value))
+                                        if (value == "Sometimes" or value == "Never") and ms.lower().find(element[2:-2]) == -1:
+                                            break 
+                                        
+                                        if value.lower() == "doesn": 
+                                            if element == "d_drugs" and ms.find('drugs') != -1:
+                                                value = "No"
+                                            elif element == "d_offspring_current" and ms.find('have') != -1:
+                                                value = "No kids"
+                                            elif element == "d_offspring_desires" and ms.find('want') != -1:
+                                                value = "Doesn't want kids"
+                                            else:
+                                                break                   
+                                        
+                                        if value.lower() == "might want" or value.lower() == "wants":
+                                            value += " kids"
+                                        target_info.append(self.get_info_element(user_name, element, value))
 
-								        if element != "d_offspring_current":
-								            flag = 1
-								        break
+                                        if element != "d_offspring_current":
+                                            flag = 1
+                                        break
 
-								if flag == 1:
-								    break
+                                if flag == 1:
+                                    break
 
-				return target_info
+                return target_info
 
     # parse looking-for paragraph.
     def parse_ideal_person(self, user_name, target_info, response):
-				sentence = response.xpath("//div[contains(@class, 'sentence')]/text()")
+                sentence = response.xpath("//div[contains(@class, 'sentence')]/text()")
 
-				# check whether there is a looking-for paragraph
-				if len(sentence) > 0:
-						sentence = sentence[0].extract().strip().split(",")
-				else:
-						return target_info
+                # check whether there is a looking-for paragraph
+                if len(sentence) > 0:
+                        sentence = sentence[0].extract().strip().split(",")
+                else:
+                        return target_info
 
-				for item in sentence:
-						item = item.strip()
-						if item.find('single') != -1:
-								target_info.append(self.get_info_element(user_name, "lf_single", "single"))
-						elif item.find('near me') != -1:
-								target_info.append(self.get_info_element(user_name, "lf_location", "near me"))
-						elif item.find('ages') != -1:
-								age_range = item.split(' ')[1]
-								min_age, max_age = age_range[:2], age_range[3:]
-								
-								target_info.append(self.get_info_element(user_name, "lf_min_age", min_age))
-								target_info.append(self.get_info_element(user_name, "lf_max_age", max_age))
-						elif item.find('for') != -1:
-								target_info.append(self.get_info_element(user_name, "lf_for", item[4:-1]))
+                for item in sentence:
+                        item = item.strip()
+                        if item.find('single') != -1:
+                                target_info.append(self.get_info_element(user_name, "lf_single", "single"))
+                        elif item.find('near me') != -1:
+                                target_info.append(self.get_info_element(user_name, "lf_location", "near me"))
+                        elif item.find('ages') != -1:
+                                age_range = item.split(' ')[1]
+                                min_age, max_age = age_range[:2], age_range[3:]
+                                
+                                target_info.append(self.get_info_element(user_name, "lf_min_age", min_age))
+                                target_info.append(self.get_info_element(user_name, "lf_max_age", max_age))
+                        elif item.find('for') != -1:
+                                target_info.append(self.get_info_element(user_name, "lf_for", item[4:-1]))
 
-				return target_info
+                return target_info
 
 
     def save_as_csv(self, user_name, target_info, response):
@@ -590,9 +593,6 @@ class OKcuSpider(scrapy.Spider):
             # pdb.set_trace()
 
             #count questions
-            # fields = [x["field"] for x in target_info]              #find all fields
-            # fields_regex = [re.search("^q", x) for x in fields]    #regex to find the questions, i.e. those beginning with q.
-            # number_q = sum([x != None for x in fields_regex]) #count the number of matches
             answer_num = response.xpath("//p[@class='medium']/text()")
             answer_num = answer_num[0].extract().strip().split(' ')[0]
 
